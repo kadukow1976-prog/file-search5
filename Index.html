@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Поиск — UgraRemKomp (доступ по паролю)</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:Arial,system-ui,Segoe UI,Roboto,sans-serif;background:#f6f7f9;color:#333}
+  .container{max-width:1100px;margin:20px auto;padding:16px}
+  h1{font-size:24px;margin-bottom:16px;text-align:center}
+  .controls{display:grid;grid-template-columns:1fr 140px;gap:10px;max-width:640px;margin:0 auto 10px}
+  input[type="text"],button{padding:10px;border-radius:8px;border:1px solid #e5e7eb}
+  input[type="text"]{font-size:16px}
+  button{background:#19c37d;border-color:#19c37d;color:#fff;cursor:pointer}
+  button:hover{background:#17a467;border-color:#17a467}
+  .status{max-width:640px;margin:10px auto;text-align:center}
+  .error{background:#fee2e2;color:#991b1b;padding:10px;border-radius:8px;display:none}
+  .ok{background:#ecfdf5;color:#065f46;padding:10px;border-radius:8px;display:none}
+  .results{margin-top:16px;display:grid;gap:12px}
+  .card{background:#fff;padding:14px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+  .card h3{font-size:16px;margin-bottom:6px}
+  .card a{color:#19c37d;font-weight:700;text-decoration:none}
+  .card a:hover{text-decoration:underline}
+  /* Парольная панель */
+  .lock{position:fixed;inset:0;display:grid;place-items:center;background:#0c0f14}
+  .panel{width:min(520px,92vw);background:#11161d;color:#e7eaee;border:1px solid #1f2630;border-radius:16px;padding:20px;box-shadow:0 12px 30px rgba(0,0,0,.35)}
+  .panel h2{margin:0 0 8px;font-size:20px}
+  .panel p{margin:0 0 12px;color:#96a1ad}
+  .panel .row{display:flex;gap:8px}
+  .panel input{flex:1;padding:12px;border-radius:10px;border:1px solid #2a3240;background:#0f141b;color:#e7eaee}
+  .panel button{padding:12px 14px;border-radius:10px;border:0;background:#19c37d;color:#092015;font-weight:700}
+  .panel small{color:#7f8a98;display:block;margin-top:10px}
+  .panel .err{color:#ff8a8a;min-height:1.2em;margin-top:8px}
+  .hidden{display:none!important}
+  @media (max-width:640px){.controls{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- Пароль -->
+<div id="lock" class="lock">
+  <div class="panel">
+    <h2>Доступ по паролю</h2>
+    <p>Введите пароль, чтобы открыть поиск и ссылки на скачивание.</p>
+    <div class="row">
+      <input id="pwd" type="password" placeholder="Пароль" autocomplete="current-password">
+      <button id="enterBtn">Войти</button>
+    </div>
+    <div id="perr" class="err"></div>
+    <small>Проверка пароля выполняется локально (SHA-256), данные никуда не отправляются.</small>
+  </div>
+</div>
+
+<!-- Приложение -->
+<div id="app" class="container hidden">
+  <h1>Поиск Файлов</h1>
+  <div class="controls">
+    <input id="q" type="text" placeholder="Ищите по словам, ссылкам, номерам — поиск по всем колонкам" autocomplete="off">
+    <button id="clearBtn">Очистить</button>
+  </div>
+  <div class="status">
+    <div id="ok" class="ok"></div>
+    <div id="err" class="error"></div>
+  </div>
+  <div id="results" class="results"></div>
+</div>
+
+<script>
+/* === НАСТРОЙКИ (ваши данные) === */
+/* CSV publish-to-web: */
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGL9aeAC7JASDu24QmYMDUpkEwbAfB5977LMJ_FBPUoARUo7IBS_z3x4f2xqW8t7_Df6E3apLRwXS7/pub?output=csv";
+/* SHA-256(пароля) в hex: */
+const PASS_HASH_HEX = "ca4d4c3c5b0d70ba148f9774d92594c86954d2235545f73b6ae853608f5414f1";
+
+/* === Утилиты === */
+const $ = s => document.querySelector(s);
+const toHex = buf => [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+const norm = s => (s||"").toString().toLowerCase()
+  .normalize("NFKD").replace(/[\u0300-\u036f]/g,"").replace(/[ёЁ]/g,m=>m==="ё"?"е":"Е").trim();
+
+/* Надёжный парсер CSV (учёт кавычек/запятых/\r\n) */
+function parseCSV(text){
+  const rows=[]; let row=[], cell="", q=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i], nx=text[i+1];
+    if(q){
+      if(ch==='\"' && nx==='\"'){ cell+='\"'; i++; }
+      else if(ch==='\"'){ q=false; }
+      else cell+=ch;
+    }else{
+      if(ch==='\"') q=true;
+      else if(ch===','){ row.push(cell); cell=""; }
+      else if(ch==='\n'){ row.push(cell); rows.push(row); row=[]; cell=""; }
+      else if(ch==='\r'){ /* skip */ }
+      else cell+=ch;
+    }
+  }
+  if(cell.length || row.length){ row.push(cell); rows.push(row); }
+  return rows;
+}
+
+/* === Парольная защита === */
+(async function lockInit(){
+  const ok = sessionStorage.getItem("ok") === "1";
+  if(ok){ openApp(); return; }
+  $("#enterBtn").addEventListener("click", checkPwd);
+  $("#pwd").addEventListener("keydown", e=>{ if(e.key==="Enter") checkPwd(); });
+  async function checkPwd(){
+    $("#perr").textContent = "";
+    try{
+      const buf = new TextEncoder().encode($("#pwd").value||"");
+      const hash = await crypto.subtle.digest("SHA-256", buf);
+      const hex = toHex(hash);
+      if(hex === PASS_HASH_HEX){ sessionStorage.setItem("ok","1"); openApp(); }
+      else $("#perr").textContent = "Неверный пароль";
+    }catch(e){ $("#perr").textContent="Ошибка проверки пароля"; console.error(e); }
+  }
+})();
+
+function openApp(){
+  $("#lock").classList.add("hidden");
+  $("#app").classList.remove("hidden");
+  init();
+}
+
+/* === Логика приложения === */
+let HEAD=[], DATA=[], VIEW=[];
+
+function bindUI(){
+  $("#q").addEventListener("input", applyFilter);
+  $("#clearBtn").addEventListener("click", ()=>{ $("#q").value=""; applyFilter(); });
+}
+
+async function init(){
+  bindUI();
+  $("#ok").style.display="block";
+  $("#ok").textContent="Загрузка данных…";
+
+  const url = CSV_URL + (CSV_URL.includes("?") ? "&" : "?") + "t=" + Date.now(); // анти-кэш
+  let text="";
+  try{
+    const res = await fetch(url, {cache:"no-store"});
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    text = await res.text();
+  }catch(e){
+    $("#ok").style.display="none";
+    $("#err").textContent = "Ошибка загрузки CSV. Проверьте публикацию Google Таблиц.";
+    $("#err").style.display="block";
+    console.error(e);
+    return;
+  }
+
+  const rows = parseCSV(text).filter(r=>r.length && r.some(c=>String(c).trim()!==""));
+  if(!rows.length){
+    $("#ok").style.display="none";
+    $("#err").textContent="CSV пустой.";
+    $("#err").style.display="block";
+    return;
+  }
+
+  HEAD = rows[0];                 // первая строка — заголовки
+  DATA = rows.slice(1);           // остальные — данные
+  $("#ok").textContent = `Загружено записей: ${DATA.length}`;
+  applyFilter();
+}
+
+function applyFilter(){
+  const q = norm($("#q").value);
+  if(!q) VIEW = DATA;
+  else   VIEW = DATA.filter(r => r.some(c => norm(c).includes(q)));
+  renderResults(VIEW);
+}
+
+function renderResults(rows){
+  const box = $("#results");
+  if(!rows.length){
+    $("#ok").style.display="none";
+    $("#err").textContent="Ничего не найдено.";
+    $("#err").style.display="block";
+    box.innerHTML="";
+    return;
+  }
+  $("#err").style.display="none";
+  $("#ok").style.display="block";
+  $("#ok").textContent = `Найдено: ${rows.length}`;
+
+  // По умолчанию считаем, что 1-я колонка — название, 2-я — ссылка. Остальные тоже выводим.
+  const html = rows.map(r=>{
+    const name = (r[0]||"").trim();
+    const url  = (r[1]||"").trim();
+    const more = r.slice(2).filter(x=>String(x||"").trim()!=="").map(x=>String(x)).join(" • ");
+    const link = /^https?:\/\//i.test(url) ? `<a href="${url}" target="_blank" rel="noopener">Скачать / Открыть</a>` : "";
+    return `<div class="card">
+      <h3>${name||"(без названия)"}</h3>
+      ${url ? `<div>${link}</div>` : `<div style="color:#777">Ссылка не указана</div>`}
+      ${more ? `<div style="margin-top:6px;color:#666">${more}</div>` : ""}
+    </div>`;
+  }).join("");
+  box.innerHTML = html;
+}
+</script>
+</body>
+</html>
