@@ -1,204 +1,569 @@
 <!doctype html>
+<!-- MiniCRM Mobile вЂ” v1.1.0 (PWA wiring + from canvas v1.0.11) -->
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Поиск — UgraRemKomp (доступ по паролю)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MiniCRM Mobile вЂ” Preview</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#0d1117">
+<link rel="icon" sizes="192x192" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
 <style>
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:Arial,system-ui,Segoe UI,Roboto,sans-serif;background:#f6f7f9;color:#333}
-  .container{max-width:1100px;margin:20px auto;padding:16px}
-  h1{font-size:24px;margin-bottom:16px;text-align:center}
-  .controls{display:grid;grid-template-columns:1fr 140px;gap:10px;max-width:640px;margin:0 auto 10px}
-  input[type="text"],button{padding:10px;border-radius:8px;border:1px solid #e5e7eb}
-  input[type="text"]{font-size:16px}
-  button{background:#19c37d;border-color:#19c37d;color:#fff;cursor:pointer}
-  button:hover{background:#17a467;border-color:#17a467}
-  .status{max-width:640px;margin:10px auto;text-align:center}
-  .error{background:#fee2e2;color:#991b1b;padding:10px;border-radius:8px;display:none}
-  .ok{background:#ecfdf5;color:#065f46;padding:10px;border-radius:8px;display:none}
-  .results{margin-top:16px;display:grid;gap:12px}
-  .card{background:#fff;padding:14px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
-  .card h3{font-size:16px;margin-bottom:6px}
-  .card a{color:#19c37d;font-weight:700;text-decoration:none}
-  .card a:hover{text-decoration:underline}
-  /* Парольная панель */
-  .lock{position:fixed;inset:0;display:grid;place-items:center;background:#0c0f14}
-  .panel{width:min(520px,92vw);background:#11161d;color:#e7eaee;border:1px solid #1f2630;border-radius:16px;padding:20px;box-shadow:0 12px 30px rgba(0,0,0,.35)}
-  .panel h2{margin:0 0 8px;font-size:20px}
-  .panel p{margin:0 0 12px;color:#96a1ad}
-  .panel .row{display:flex;gap:8px}
-  .panel input{flex:1;padding:12px;border-radius:10px;border:1px solid #2a3240;background:#0f141b;color:#e7eaee}
-  .panel button{padding:12px 14px;border-radius:10px;border:0;background:#19c37d;color:#092015;font-weight:700}
-  .panel small{color:#7f8a98;display:block;margin-top:10px}
-  .panel .err{color:#ff8a8a;min-height:1.2em;margin-top:8px}
-  .hidden{display:none!important}
-  @media (max-width:640px){.controls{grid-template-columns:1fr}}
+:root{ --bg:#0d1117; --panel:#111827; --soft:#0f1623; --border:#1f2a37; --text:#e6edf3; --dim:#8b98a5; --accent:#19c37d; --warn:#ff9d4d; --ok:#3ddc97; --danger:#ff6b6b; --ghost:rgba(255,255,255,.06); --radius:16px; }
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,sans-serif}
+.container{max-width:920px;margin:0 auto;padding:12px}
+.header{position:sticky;top:0;z-index:10;background:linear-gradient(180deg,var(--bg) 75%, rgba(13,17,23,0));padding:12px 12px 8px}
+.search{display:flex;align-items:center;gap:8px;background:var(--soft);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px}
+.search input{flex:1;background:transparent;border:0;outline:none;color:var(--text);font-size:17px}
+
+.list{display:grid;gap:10px}
+.card{cursor:pointer;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:12px;position:relative;transition:box-shadow .15s ease, background .2s ease, border-color .2s ease}
+.card.ok{background:linear-gradient(180deg,#0f1f1a,var(--panel));border-color:rgba(61,220,151,.25);box-shadow:0 0 0 1px rgba(61,220,151,.18) inset;position:relative}
+.card.ok::after{content:"";position:absolute;inset:0;pointer-events:none;background:rgba(61,220,151,.08);box-shadow:0 0 0 1px rgba(61,220,151,.18) inset,0 0 24px rgba(61,220,151,.18) inset}
+.card.warn{background:linear-gradient(180deg,#241612,var(--panel));border-color:rgba(255,157,77,.25);box-shadow:0 0 0 1px rgba(255,157,77,.18) inset;position:relative}
+.card.warn::after{content:"";position:absolute;inset:0;pointer-events:none;background:rgba(255,77,77,.10);box-shadow:0 0 0 1px rgba(255,157,77,.18) inset,0 0 24px rgba(255,77,77,.18) inset}
+.card .row{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.card .meta{color:var(--dim);font-size:12px;margin-top:4px}
+.phone-link{color:var(--text);text-decoration:none;border-bottom:1px dashed rgba(230,237,243,.3);padding-bottom:1px}
+.phone-link:hover{color:var(--accent);border-bottom-color:var(--accent)}
+.name{font-weight:800;color:var(--accent)}
+.badges{display:flex;gap:6px;flex-wrap:wrap}
+.badge{display:inline-block;border-radius:999px;font-size:12px;padding:6px 10px;border:1px solid var(--border);background:#132a22;color:var(--accent)}
+.badge.warn{background:#2b2112;color:var(--warn);border-color:#3c2f1a}
+.badge.ok{background:#132a22;color:var(--ok)}
+
+.btn{height:48px;border-radius:14px;border:1px solid var(--border);background:var(--soft);color:var(--text);font-weight:700;padding:0 14px;transition:box-shadow .15s ease, transform .06s ease, background .15s ease}
+.btn.small{height:42px;padding:0 12px;border-radius:12px}
+.btn.primary{background:var(--accent);color:#0b2a1b}
+.btn.ghost{background:var(--ghost);border-color:var(--border);color:#c9d4df}
+.btn.danger{background:#9f2b2b;border-color:#b23a3a;color:#fff}
+.btn:hover{box-shadow:0 0 0 2px rgba(25,195,125,.25)}
+.btn:focus-visible{outline:2px solid rgba(25,195,125,.45);outline-offset:2px}
+.btn:active{transform:translateY(1px)}
+
+.fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));width:60px;height:60px;border-radius:30px;background:var(--accent);color:#0b2a1b;border:0;box-shadow:0 10px 24px rgba(0,0,0,.45);font-size:30px;font-weight:800}
+.fab:active{transform:scale(.98)}
+
+.empty{display:grid;gap:10px;justify-items:center;padding:24px;color:var(--dim)}
+.hidden{display:none !important}
+
+.sheet-back{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:30}
+.sheet{background:var(--panel);border-top-left-radius:var(--radius);border-top-right-radius:var(--radius);border-top:1px solid var(--border);width:100%;max-width:920px;max-height:90vh;overflow:auto;padding:16px;position:relative}
+.sheet.debt-mode::before{content:"";position:absolute;inset:0;border-top-left-radius:var(--radius);border-top-right-radius:var(--radius);pointer-events:none;background:rgba(255,77,77,.10)} 
+.sheet.ok-mode::before{content:"";position:absolute;inset:0;border-top-left-radius:var(--radius);border-top-right-radius:var(--radius);pointer-events:none;background:transparent;box-shadow:0 0 0 1px rgba(61,220,151,.20) inset,0 0 90px rgba(61,220,151,.12) inset}
+.sheet.new-mode::before{content:"";position:absolute;inset:0;border-top-left-radius:var(--radius);border-top-right-radius:var(--radius);pointer-events:none;background:radial-gradient(120% 120% at 50% 10%, rgba(25,195,125,.18), rgba(25,195,125,.08) 40%, rgba(0,0,0,0) 70%);box-shadow:0 0 0 1px rgba(25,195,125,.25) inset, 0 0 120px rgba(25,195,125,.22) inset} 
+.sheet.debt-mode .btn{opacity:.7;color:#fff}
+.sheet.debt-mode .btn.primary{background:rgba(25,195,125,.85);color:#0b2a1b}
+.sheet.ok-mode .btn{opacity:1}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px}
+.title{font-weight:800;display:flex;align-items:center;gap:10px}
+.head-stats{display:flex;gap:8px;align-items:center}
+.pill{min-width:68px;text-align:center;padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:var(--soft);font-weight:800;font-size:12px;line-height:1}
+.pill.warn{box-shadow:0 0 0 1px rgba(255,157,77,.25) inset;color:var(--warn)}
+.pill.ok{box-shadow:0 0 0 1px rgba(61,220,151,.25) inset;color:var(--ok)}
+.sheet-body{display:grid;gap:12px}
+
+.form{display:grid;gap:12px}
+.field{display:grid;gap:6px}
+.field>label{color:var(--dim);font-size:12px}
+.input{display:flex;align-items:center;background:var(--soft);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px}
+.input>input,.input>textarea, .input>select{flex:1;background:transparent;border:0;outline:none;color:var(--text);font-size:17px;resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:480px){.grid2{grid-template-columns:1fr}}
+
+/* side panels */
+.side{position:fixed;top:0;height:100vh;width:86%;max-width:560px;background:var(--panel);border-left:1px solid var(--border);border-right:1px solid var(--border);z-index:40;transform:translateX(110%);transition:transform .18s ease-out;box-shadow:-12px 0 24px rgba(0,0,0,.4)}
+.side.left{left:0;transform:translateX(-110%);box-shadow:12px 0 24px rgba(0,0,0,.4)}
+.side.show.right{transform:translateX(0)}
+.side.show.left{transform:translateX(0)}
+.side .side-head{display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid var(--border)}
+.side .side-body{padding:12px;display:grid;gap:12px}
+.settings-input .btn.equal{flex:1}
+.settings-input .btn.equal + .btn.equal{margin-left:8px}
+.settings-input{display:flex;align-items:center;background:var(--soft);border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:6px}
+.settings-input>input{flex:1;background:transparent;border:0;outline:none;color:var(--text)}
+.settings-input input[type="password"]{-webkit-text-security:disc;text-security:disc}
+.link-list a{display:block;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--soft);color:var(--text);text-decoration:none}
+
+/* ownership watermark (clickable) */
+.wm{position:fixed;bottom:8px;right:10px;font-size:10px;color:rgba(255,255,255,.2);letter-spacing:.4px;z-index:50}
+.wm a{color:rgba(255,255,255,.35);text-decoration:none;border-bottom:1px dashed rgba(255,255,255,.15)}
+.wm a:hover{color:#19c37d;border-bottom-color:#19c37d}
+
+.toast{position:fixed;left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#222c3a;color:#fff;border:1px solid #2b3b52;border-radius:10px;padding:8px 12px;font-size:13px;box-shadow:0 6px 18px rgba(0,0,0,.35);z-index:60}
+
+.settings-actions{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:6px}
+.settings-actions .btn.small{height:36px;border-radius:10px;background:var(--soft);color:var(--text);border:1px solid var(--border)}
+.settings-actions .btn.small:active{transform:translateY(1px)}
 </style>
 </head>
 <body>
-
-<!-- Пароль -->
-<div id="lock" class="lock">
-  <div class="panel">
-    <h2>Доступ по паролю</h2>
-    <p>Введите пароль, чтобы открыть поиск и ссылки на скачивание.</p>
-    <div class="row">
-      <input id="pwd" type="password" placeholder="Пароль" autocomplete="current-password">
-      <button id="enterBtn">Войти</button>
+  <header class="header container">
+    <div class="search" role="search" aria-label="РџРѕРёСЃРє РєР»РёРµРЅС‚РѕРІ">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M21 21l-3.5-3.5" stroke="#8b98a5" stroke-width="1.8" stroke-linecap="round"></path>
+        <circle cx="11" cy="11" r="7" stroke="#8b98a5" stroke-width="1.8"></circle>
+      </svg>
+      <input id="q" placeholder="РџРѕРёСЃРє: РёРјСЏ, С‚РµР»РµС„РѕРЅ, ID" autocomplete="off">
     </div>
-    <div id="perr" class="err"></div>
-    <small>Проверка пароля выполняется локально (SHA-256), данные никуда не отправляются.</small>
+  </header>
+
+  <main class="container">
+    <div id="results" class="list"></div>
+    <div id="empty" class="empty hidden">
+      <div>РЎРѕРІРїР°РґРµРЅРёР№ РЅРµС‚.</div>
+      <button class="btn primary" id="empty-add">Р”РѕР±Р°РІРёС‚СЊ РєР»РёРµРЅС‚Р°</button>
+    </div>
+  </main>
+
+  <button class="fab" id="btn-new" aria-label="РќРѕРІС‹Р№ Р·Р°РєР°Р·">пј‹</button>
+
+  <aside id="admin" class="side right">
+    <div class="side-head"><b>РђРґРјРёРЅ</b><button class="btn small" id="admin-close">вњ•</button></div>
+    <div class="side-body">
+      <div class="settings-input"><input id="admin-pass" type="password" placeholder="РџР°СЂРѕР»СЊ" inputmode="numeric" autocomplete="new-password" enterkeyhint="done" maxlength="32"><button class="btn small" id="admin-login">Р’РѕР№С‚Рё</button></div>
+      <div id="admin-area" class="hidden">
+        <div class="settings-input"><input id="settings-search" placeholder="РџРѕРёСЃРє РїРѕ РЅР°СЃС‚СЂРѕР№РєР°Рј"></div>
+        <div class="settings-input"><input id="quick-name" placeholder="РРјСЏ РєР»РёРµРЅС‚Р°" autocomplete="name"></div>
+        <div class="settings-input"><input id="quick-phone" placeholder="РўРµР»РµС„РѕРЅ" autocomplete="tel" inputmode="tel"></div>
+        <button class="btn small primary" id="quick-create" type="button">РЎРѕР·РґР°С‚СЊ РєР»РёРµРЅС‚Р°</button>
+      </div>
+    </div>
+  </aside>
+
+  <aside id="resources" class="side left">
+    <div class="side-head"><b>Р РµСЃСѓСЂСЃС‹</b><button class="btn small" id="res-close">вњ•</button></div>
+    <div class="side-body" id="res-body">
+      <div class="settings-input"><input id="res-search" placeholder="РџРѕРёСЃРє РїРѕ СЂРµСЃСѓСЂСЃР°Рј" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="search" name="resq"></div>
+      <div id="res-list" class="link-list"></div>
+    </div>
+  </aside>
+
+  <div class="sheet-back hidden" id="sheet-back" aria-hidden="true">
+    <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+      <header class="sheet-head">
+        <div class="title"><span id="sheet-title">РљР°СЂС‚РѕС‡РєР° РєР»РёРµРЅС‚Р°</span></div>
+        <div class="head-stats">
+          <div id="pill-debt" class="pill">Р”РѕР»Рі 0 в‚Ѕ</div>
+          <div id="pill-total" class="pill ok">РС‚РѕРі 0 в‚Ѕ</div>
+        </div>
+        <button class="btn small" id="sheet-close">вњ•</button>
+      </header>
+      <div class="sheet-body">
+        <form id="form" class="form">
+          <div class="field">
+            <label>РРјСЏ РєР»РёРµРЅС‚Р°</label>
+            <div class="input"><input name="name" required placeholder="РРІР°РЅ РџРµС‚СЂРѕРІ" autocomplete="name"></div>
+          </div>
+
+          <div class="field">
+            <label>РўРµР»РµС„РѕРЅ</label>
+            <div class="input"><input name="phone" required placeholder="+7 (9XX) XXX-XX-XX" autocomplete="tel" inputmode="tel"></div>
+          </div>
+
+          <div class="grid2">
+            <div class="field">
+              <label>Р”Р°С‚Р° РѕР±СЂР°С‰РµРЅРёСЏ</label>
+              <div class="input"><input type="date" name="date" required></div>
+            </div>
+            <div class="field">
+              <label>Р РµР№С‚РёРЅРі</label>
+              <div class="input"><input type="range" min="1" max="5" step="1" name="rating" value="5" oninput="this.nextElementSibling.textContent='в…'.repeat(this.value) + 'в†'.repeat(5-this.value)"><span>в…в…в…в…в…</span></div>
+            </div>
+          </div>
+
+          <div class="grid2">
+            <div class="field">
+              <label>РЎС‚РѕРёРјРѕСЃС‚СЊ СЂР°Р±РѕС‚С‹ (в‚Ѕ)</label>
+              <div class="input"><input type="number" name="labor" value="0" inputmode="numeric"></div>
+            </div>
+            <div class="field">
+              <label>РЎС‚РѕРёРјРѕСЃС‚СЊ РґРµС‚Р°Р»РµР№ (в‚Ѕ)</label>
+              <div class="input"><input type="number" name="parts" value="0" inputmode="numeric"></div>
+            </div>
+          </div>
+
+          <div class="grid2">
+            <div class="field">
+              <label>РќР°С†РµРЅРєР° (в‚Ѕ)</label>
+              <div class="input"><input type="number" name="markup" value="0" inputmode="numeric"></div>
+            </div>
+            <div class="field">
+              <label>РћРїР»Р°С‡РµРЅРѕ (в‚Ѕ)</label>
+              <div class="input"><input type="number" name="paid" value="0" inputmode="numeric"></div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>РЎСЃС‹Р»РєР° РЅР° СЃР°Р№С‚ Р·Р°РєР°Р·Р° (URL)</label>
+            <div class="input"><input name="orderUrl" placeholder="https://crm.example.com/order/123" autocomplete="url"></div>
+          </div>
+
+          <div class="field">
+            <label>Р—Р°РјРµС‚РєР° РјР°СЃС‚РµСЂР°</label>
+            <div class="input"><textarea name="note" rows="3" placeholder="РљСЂР°С‚РєР°СЏ Р·Р°РјРµС‚РєР°..."></textarea></div>
+          </div>
+        </form>
+      </div>
+    </section>
   </div>
-</div>
 
-<!-- Приложение -->
-<div id="app" class="container hidden">
-  <h1>Поиск Файлов</h1>
-  <div class="controls">
-    <input id="q" type="text" placeholder="Ищите по словам, ссылкам, номерам — поиск по всем колонкам" autocomplete="off">
-    <button id="clearBtn">Очистить</button>
-  </div>
-  <div class="status">
-    <div id="ok" class="ok"></div>
-    <div id="err" class="error"></div>
-  </div>
-  <div id="results" class="results"></div>
-</div>
+  <div class="toast hidden" id="toast">РЎРѕС…СЂР°РЅРµРЅРѕ</div>
 
-<script>
-/* === НАСТРОЙКИ (ваши данные) === */
-/* CSV publish-to-web: */
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGL9aeAC7JASDu24QmYMDUpkEwbAfB5977LMJ_FBPUoARUo7IBS_z3x4f2xqW8t7_Df6E3apLRwXS7/pub?output=csv";
-/* SHA-256(пароля) в hex: */
-const PASS_HASH_HEX = "ca4d4c3c5b0d70ba148f9774d92594c86954d2235545f73b6ae853608f5414f1";
+<script>(function(){'use strict';
+function $(s,r){return (r||document).querySelector(s)};function $$(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+var LOG=true;function dbg(){try{if(!LOG)return;var a=Array.prototype.slice.call(arguments);a.unshift('[MiniCRM]');console.log.apply(console,a)}catch(e){}}
 
-/* === Утилиты === */
-const $ = s => document.querySelector(s);
-const toHex = buf => [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
-const norm = s => (s||"").toString().toLowerCase()
-  .normalize("NFKD").replace(/[\u0300-\u036f]/g,"").replace(/[ёЁ]/g,m=>m==="ё"?"е":"Е").trim();
+var DEBOUNCE_MS=200;var AUTOSAVE_MS=700;function isoDate(){return new Date().toISOString().slice(0,10)}
+function fmt(n){return new Intl.NumberFormat('ru-RU').format(Math.round(n||0))}
+function computeDebt(c){var v=Math.max(0,(+c.parts||0)+(+c.labor||0)+(+c.markup||0)-(+c.paid||0));return v}
+function validUrl(u){try{var x=new URL(u);return /^https?:/.test(x.protocol)}catch(e){return false}}
+function sanitize(t){return String(t||'').replace(/[<>]/g,function(s){return({'<':'&lt;','>':'&gt;'}[s])})}
+function toast(t){var el=$('#toast');el.textContent=t;el.classList.remove('hidden');setTimeout(function(){el.classList.add('hidden')},1600)}
+function normalizePhone(p){if(!p){return'';}var d=String(p).replace(/[^0-9]/g,'');if(!d){return'';}var n=d;if(n.indexOf('8')===0)n='7'+n.slice(1);if(n.indexOf('9')===0)n='7'+n;if(n.indexOf('7')!==0)n='7'+n;return n}
 
-/* Надёжный парсер CSV (учёт кавычек/запятых/\r\n) */
-function parseCSV(text){
-  const rows=[]; let row=[], cell="", q=false;
-  for(let i=0;i<text.length;i++){
-    const ch=text[i], nx=text[i+1];
-    if(q){
-      if(ch==='\"' && nx==='\"'){ cell+='\"'; i++; }
-      else if(ch==='\"'){ q=false; }
-      else cell+=ch;
-    }else{
-      if(ch==='\"') q=true;
-      else if(ch===','){ row.push(cell); cell=""; }
-      else if(ch==='\n'){ row.push(cell); rows.push(row); row=[]; cell=""; }
-      else if(ch==='\r'){ /* skip */ }
-      else cell+=ch;
+var __results=[];var __currentIndex=-1;
+var DB_NAME='mini_crm_db',DB_VERSION=2,STORE='clients',LS_KEY='mini_crm_backup_v2',USE_LS=false,MEM=[];
+function lsGet(){try{if(typeof localStorage==='undefined')return MEM.slice();var raw=localStorage.getItem(LS_KEY);var v=raw?JSON.parse(raw):MEM.slice();return v}catch(e){return MEM.slice()}}
+function lsSet(rows){MEM=rows.slice();try{if(typeof localStorage==='undefined')return;localStorage.setItem(LS_KEY,JSON.stringify(rows));}catch(e){}}
+function ensureIDB(){
+  if(USE_LS){return Promise.reject(new Error('LS'))}
+  if(!('indexedDB' in window)){USE_LS=true;return Promise.reject(new Error('no IDB'))}
+  return new Promise(function(res,rej){
+    try{
+      var req=indexedDB.open(DB_NAME,DB_VERSION);
+      req.onupgradeneeded=function(){
+        var db=req.result;
+        if(!db.objectStoreNames.contains(STORE)){
+          var os=db.createObjectStore(STORE,{keyPath:'id'});
+          os.createIndex('updated','updated',{unique:false});
+          os.createIndex('phone','phoneNorm',{unique:false});
+          os.createIndex('name','name',{unique:false})
+        }
+      };
+      req.onsuccess=function(){res(req.result)};
+      req.onerror=function(){USE_LS=true;rej(req.error||new Error('open'))}
+    }catch(e){USE_LS=true;rej(e)}
+  })
+}
+function idbTx(mode,fn){
+  return ensureIDB().then(function(db){
+    return new Promise(function(resolve,reject){
+      try{
+        var tx=db.transaction(STORE,mode);var st=tx.objectStore(STORE);var r=fn(st);
+        tx.oncomplete=function(){resolve(r)};tx.onerror=function(){USE_LS=true;reject(tx.error||new Error('tx'))}
+      }catch(e){USE_LS=true;reject(e)}
+    })
+  })
+}
+var CRMDB={
+  all:function(){
+    if(USE_LS){var a=lsGet();return Promise.resolve(a.sort(function(a,b){return(b.updated||'').localeCompare(a.updated||'')}))}
+    return idbTx('readonly',function(st){return st.getAll()}).then(function(a){return a.sort(function(a,b){return(b.updated||'').localeCompare(a.updated||'')})}).catch(function(){USE_LS=true;var a=lsGet();return a.sort(function(a,b){return(b.updated||'').localeCompare(a.updated||'')})})
+  },
+  put:function(row){
+    var c=Object.assign({},row);c.phoneNorm=normalizePhone(c.phone);c.updated=c.updated||new Date().toISOString();
+    if(USE_LS){var a=lsGet();var i=a.findIndex(function(x){return x.id===c.id});if(i>=0)a[i]=c;else a.unshift(c);lsSet(a);return Promise.resolve(c)}
+    return idbTx('readwrite',function(st){return st.put(c)}).then(function(){return c}).catch(function(){USE_LS=true;var a=lsGet();var i=a.findIndex(function(x){return x.id===c.id});if(i>=0)a[i]=c;else a.unshift(c);lsSet(a);return c})
+  },
+  remove:function(id){
+    if(USE_LS){var a=lsGet().filter(function(x){return x.id!==id});lsSet(a);return Promise.resolve()}
+    return idbTx('readwrite',function(st){return st.delete(id)}).then(function(){}).catch(function(){USE_LS=true;var a=lsGet().filter(function(x){return x.id!==id});lsSet(a)})
+  },
+  seed:function(rows){rows.forEach(function(r){CRMDB.put(r)});return Promise.resolve()},
+  search:function(q){
+    q=(q||'').trim().toLowerCase();
+    return CRMDB.all().then(function(all){if(!q)return all;var norm=normalizePhone(q);var res=all.filter(function(c){
+        var idOk=(c.id||'').toLowerCase().indexOf(q)!==-1;
+        var nameOk=(c.name||'').toLowerCase().indexOf(q)!==-1;
+        var phoneOk=norm&&(String(c.phone||'').replace(/[^0-9]/g,'').indexOf(norm)!==-1);
+        return idOk||nameOk||phoneOk
+      });return res;})
+  }
+};
+
+function renderList(rows){
+  __results=rows.slice();
+  var list=$('#results');list.innerHTML='';var empty=$('#empty');if(!rows.length){empty.classList.remove('hidden');return}empty.classList.add('hidden');
+  rows.forEach(function(c,i){
+    var debt=computeDebt(c);var phoneText=sanitize(c.phone);var dateText=sanitize(c.date||'вЂ”');
+    var statusHtml=(debt>0?`<span class="badge warn">Р”РѕР»Рі ${fmt(debt)}в‚Ѕ</span>`:`<span class="badge ok">РћРїР»Р°С‡РµРЅРѕ ${fmt(c.paid||0)}в‚Ѕ</span>`);
+    var card=document.createElement('div');
+    card.className='card '+(debt>0?'warn':'ok');
+    card.style.textAlign='left';
+    card.setAttribute('role','button');
+    card.tabIndex=0; card.dataset.index=String(i);
+    card.setAttribute('aria-label','РћС‚РєСЂС‹С‚СЊ РєР»РёРµРЅС‚Р° '+(c.name||''));
+    var telHref='tel:'+String(c.phone||'').replace(/[^+\d]/g,'');
+    card.innerHTML=`
+      <div class="row">
+        <div>
+          <div class="name${debt>0?' debtor':''}">${sanitize(c.name)}</div>
+          <div class="meta"><a class="phone-link" href="${telHref}">${phoneText}</a> вЂў ${dateText}</div>
+        </div>
+        <div class="badges">
+          <span class="badge">Р Р°Р±РѕС‚С‹ ${fmt(c.labor)}в‚Ѕ</span>
+          <span class="badge">Р”РµС‚Р°Р»Рё ${fmt(c.parts)}в‚Ѕ</span>
+          ${statusHtml}
+        </div>
+      </div>`;
+    var phoneA=card.querySelector('a.phone-link');
+    if(phoneA){phoneA.addEventListener('click',function(e){e.stopPropagation()})}
+    card.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();openSheet(c,i)}});
+    card.addEventListener('click',function(){openSheet(c,i)});
+    list.appendChild(card)
+  })
+}
+
+function openSheet(client,index){
+  if(typeof index==='number'){__currentIndex=index}else{var i=(__results||[]).findIndex(function(x){return x&&client&&x.id===client.id});__currentIndex=i>=0?i:-1}
+  var sheetBack=$('#sheet-back');var sheet=$('.sheet',sheetBack);sheetBack.classList.remove('hidden');
+  var f=$('#form');
+  sheet.classList.remove('new-mode','debt-mode','ok-mode');
+  if(!client){sheet.classList.add('new-mode');}
+
+  var state=client?Object.assign({},client):{id:Math.random().toString(36).slice(2,8),name:'',phone:'',date:isoDate(),parts:0,labor:0,markup:0,paid:0,debt:0,note:'',orderUrl:'',rating:5,updated:new Date().toISOString()};
+  f.dataset.mode=client?'edit':'add';
+  $('#sheet-title').textContent=client?'РљР°СЂС‚РѕС‡РєР° РєР»РёРµРЅС‚Р°':'РќРѕРІС‹Р№ Р·Р°РєР°Р·';
+  f.name.value=state.name||'';f.phone.value=state.phone||'';f.date.value=state.date||isoDate();
+  f.parts.value=state.parts||0;f.labor.value=state.labor||0;f.markup.value=state.markup||0;f.paid.value=state.paid||0;f.orderUrl.value=state.orderUrl||'';f.note.value=state.note||'';if(f.rating)f.rating.value=state.rating||5;
+
+  function updBadges(){
+    state.debt=computeDebt({parts:+f.parts.value||0,labor:+f.labor.value||0,markup:+f.markup.value||0,paid:+f.paid.value||0});
+    var total=(+f.parts.value||0)+(+f.labor.value||0)+(+f.markup.value||0);
+    var pillD=$('#pill-debt'); if(pillD){pillD.textContent='Р”РѕР»Рі '+fmt(state.debt)+' в‚Ѕ'; pillD.classList.remove('warn','ok'); pillD.classList.add(state.debt>0?'warn':'ok'); }
+    var pillT=$('#pill-total'); if(pillT){pillT.textContent='РС‚РѕРі '+fmt(total)+' в‚Ѕ'; pillT.classList.remove('ok'); if(state.debt===0){pillT.classList.add('ok');} }
+    var sheetEl=$('.sheet',$('#sheet-back'));
+    if(sheetEl){
+      var isAdd=(f.dataset.mode==='add');
+      sheetEl.classList.toggle('new-mode',isAdd);
+      if(isAdd){sheetEl.classList.remove('debt-mode','ok-mode');}
+      else{sheetEl.classList.toggle('debt-mode',state.debt>0);sheetEl.classList.toggle('ok-mode',state.debt===0)}
     }
   }
-  if(cell.length || row.length){ row.push(cell); rows.push(row); }
-  return rows;
-}
+  updBadges();
 
-/* === Парольная защита === */
-(async function lockInit(){
-  const ok = sessionStorage.getItem("ok") === "1";
-  if(ok){ openApp(); return; }
-  $("#enterBtn").addEventListener("click", checkPwd);
-  $("#pwd").addEventListener("keydown", e=>{ if(e.key==="Enter") checkPwd(); });
-  async function checkPwd(){
-    $("#perr").textContent = "";
-    try{
-      const buf = new TextEncoder().encode($("#pwd").value||"");
-      const hash = await crypto.subtle.digest("SHA-256", buf);
-      const hex = toHex(hash);
-      if(hex === PASS_HASH_HEX){ sessionStorage.setItem("ok","1"); openApp(); }
-      else $("#perr").textContent = "Неверный пароль";
-    }catch(e){ $("#perr").textContent="Ошибка проверки пароля"; console.error(e); }
+  function buildRow(){
+    return {
+      id:state.id,
+      name:f.name.value.trim(),
+      phone:f.phone.value.trim(),
+      date:f.date.value,
+      parts:+f.parts.value||0,
+      labor:+f.labor.value||0,
+      markup:+f.markup.value||0,
+      paid:+f.paid.value||0,
+      debt:0,
+      note:f.note.value.trim(),
+      orderUrl:(f.orderUrl.value.trim()||undefined),
+      rating:+(f.rating?f.rating.value:5),
+      updated:new Date().toISOString()
+    };
   }
-})();
 
-function openApp(){
-  $("#lock").classList.add("hidden");
-  $("#app").classList.remove("hidden");
-  init();
+  var autosaveTimer=null,lastSnapshot='';
+  function scheduleAutoSave(){
+    clearTimeout(autosaveTimer);
+    autosaveTimer=setTimeout(function(){
+      var row=buildRow();
+      row.debt=computeDebt(row);
+      var snap=JSON.stringify({name:row.name,phone:row.phone,date:row.date,parts:row.parts,labor:row.labor,markup:row.markup,paid:row.paid,note:row.note,orderUrl:row.orderUrl,rating:row.rating});
+      if(snap===lastSnapshot){return;}
+      lastSnapshot=snap;
+      CRMDB.put(row).then(function(){
+        CRMDB.search($('#q').value).then(function(r){renderList(r)});
+        toast('РђРІС‚РѕСЃРѕС…СЂР°РЅРµРЅРѕ');
+      });
+    },AUTOSAVE_MS);
+  }
+
+  ['parts','labor','markup','paid','name','phone','orderUrl','note','date','rating'].forEach(function(n){
+    if(f[n]){
+      f[n].oninput=function(){
+        state[n]=(n==='name'||n==='phone'||n==='orderUrl'||n==='note'||n==='date')?f[n].value:(n==='rating'?+f[n].value:+f[n].value||0);
+        updBadges();
+        scheduleAutoSave();
+      }
+    }
+  });
+
+  (function(){
+    var sx=null, sy=null, sheetEl=$('.sheet',$('#sheet-back'));
+    function st(e){var t=e.touches?e.touches[0]:e;sx=t.clientX;sy=t.clientY}
+    function mv(e){if(sx==null)return;var t=e.touches?e.touches[0]:e;var dx=t.clientX-sx;var dy=t.clientY-sy;if(Math.abs(dy)>60)return;sheetEl.style.transform='translateX('+(dx*0.12)+'px)'}
+    function en(e){if(sx==null)return;var t=e.changedTouches?e.changedTouches[0]:e;var dx=t.clientX-sx;var dy=t.clientY-sy;sheetEl.style.transform='';if(Math.abs(dy)<60){if(dx<=-80){openNeighbor(1)}else if(dx>=80){openNeighbor(-1)}}sx=sy=null}
+    var sheetBack=$('#sheet-back');sheetEl.addEventListener('touchstart',st,{passive:true});sheetEl.addEventListener('touchmove',mv,{passive:true});sheetEl.addEventListener('touchend',en,{passive:true});
+    sheetBack.addEventListener('click',function(e){if(e.target===sheetBack){closeSheet()}})
+  })();
+
+  f.onkeydown=function(e){if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();f.requestSubmit&&f.requestSubmit()}};
+
+  f.onsubmit=function(e){e.preventDefault();
+    var row=buildRow();
+    row.debt=computeDebt(row);
+    CRMDB.put(row).then(function(){closeSheet();CRMDB.search($('#q').value).then(function(r){renderList(r);toast('РЎРѕС…СЂР°РЅРµРЅРѕ')})})
+  };
 }
 
-/* === Логика приложения === */
-let HEAD=[], DATA=[], VIEW=[];
+function closeSheet(){$('#sheet-back').classList.add('hidden')}
+function openNeighbor(dir){if(!Array.isArray(__results)||__results.length===0){closeSheet();return}if(typeof __currentIndex!=='number'||__currentIndex<0){__currentIndex=0}var n=(__currentIndex+dir+__results.length)%__results.length;__currentIndex=n;var c=__results[n];if(c){openSheet(c,n)}}
 
-function bindUI(){
-  $("#q").addEventListener("input", applyFilter);
-  $("#clearBtn").addEventListener("click", ()=>{ $("#q").value=""; applyFilter(); });
+function exportCSV(rows){var header=['id','name','phone','date','parts','labor','markup','paid','debt','note','orderUrl','rating','updated'];var csv=[header.join(';')].concat(rows.map(function(r){return header.map(function(k){var v=r[k]==null?'':String(r[k]);return /[";\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(';')})).join('\n');var blob=new Blob([csv],{type:'text/csv;charset=utf-8'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='clients.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)}
+function onSearch(){clearTimeout(window.__t);window.__t=setTimeout(function(){var q=$('#q').value;CRMDB.search(q).then(function(r){renderList(r)})},DEBOUNCE_MS)}
+
+function initDemo(){return CRMDB.all().then(function(all){if(all&&all.length){return;}return CRMDB.seed([
+  {id:'1001',name:'РРІР°РЅ РџРµС‚СЂРѕРІ',phone:'+7 999 111-22-33',date:isoDate(),parts:3500,labor:2000,markup:0,paid:2000,rating:5,note:'Р—Р°РјРµРЅР° РґРёСЃРїР»РµСЏ',updated:new Date().toISOString()},
+  {id:'1002',name:'РњР°СЂРёСЏ РљРёРј',phone:'+7 912 555-66-44',date:isoDate(),parts:1200,labor:1500,markup:0,paid:1200,rating:4,note:'Р—Р°РјРµРЅР° РђРљР‘',updated:new Date().toISOString()},
+  {id:'1003',name:'РЎРµСЂРіРµР№ РћСЂР»РѕРІ',phone:'+7 904 777-88-55',date:isoDate(),parts:6800,labor:1800,markup:500,paid:5000,rating:3,note:'РџР»Р°С‚Р°',updated:new Date().toISOString()},
+  {id:'2001',name:'РљР°РґСѓРєРѕРІ РђРЅРґСЂРµР№',phone:'+7 910 711-60-72',date:isoDate(),parts:3000,labor:2500,markup:300,paid:1000,rating:5,note:'Р”РёР°РіРЅРѕСЃС‚РёРєР° Рё СЃР±РѕСЂРєР°',updated:new Date().toISOString()}
+])})}
+
+function attachGestures(){
+  var startX=null,startY=null;
+  function onStart(e){var t=e.touches?e.touches[0]:e;startX=t.clientX;startY=t.clientY}
+  function onMove(e){
+    if(startX==null)return;
+    var t=e.touches?e.touches[0]:e;var dx=t.clientX-startX;var dy=t.clientY-startY; if(Math.abs(dy)>50)return;
+    var adminOpen=$('#admin').classList.contains('show');
+    var resOpen=$('#resources').classList.contains('show');
+    if(!adminOpen && !resOpen){
+      if(dx<-60){ showAdmin(true); startX=null; startY=null; }
+      else if(dx>60){ showRes(true); startX=null; startY=null; }
+    } else if(adminOpen){
+      if(dx>80){ showAdmin(false); startX=null; startY=null; }
+    } else if(resOpen){
+      if(dx<-80){ showRes(false); startX=null; startY=null; }
+    }
+  }
+  function onEnd(){startX=null;startY=null}
+  document.addEventListener('touchstart',onStart,{passive:true});
+  document.addEventListener('touchmove',onMove,{passive:true});
+  document.addEventListener('touchend',onEnd,{passive:true});
+
+  var a=$('#admin'); var r=$('#resources');
+  var sxA=null,syA=null,sxR=null,syR=null;
+  function stA(e){var t=e.touches?e.touches[0]:e;sxA=t.clientX;syA=t.clientY}
+  function mvA(e){if(sxA==null)return;var t=e.touches?e.touches[0]:e;var dx=t.clientX-sxA;var dy=t.clientY-syA;if(Math.abs(dy)>40)return;if(dx>60){showAdmin(false);sxA=syA=null}}
+  function enA(){sxA=syA=null}
+  a.addEventListener('touchstart',stA,{passive:true});a.addEventListener('touchmove',mvA,{passive:true});a.addEventListener('touchend',enA,{passive:true});
+
+  function stR(e){var t=e.touches?e.touches[0]:e;sxR=t.clientX;syR=t.clientY}
+  function mvR(e){if(sxR==null)return;var t=e.touches?e.touches[0]:e;var dx=t.clientX-sxR;var dy=t.clientY-syR;if(Math.abs(dy)>40)return;if(dx<-60){showRes(false);sxR=syR=null}}
+  function enR(){sxR=syR=null}
+  r.addEventListener('touchstart',stR,{passive:true});r.addEventListener('touchmove',mvR,{passive:true});r.addEventListener('touchend',enR,{passive:true});
+}
+function showAdmin(v){var el=$('#admin');el.classList.toggle('show',!!v)}
+function showRes(v){
+  var el=$('#resources');
+  el.classList.toggle('show',!!v);
+  if(!v) return;
+  var body=$('#res-body');
+  if(body){
+    body.innerHTML = '<div class="settings-input"><input id="res-search" placeholder="РџРѕРёСЃРє РїРѕ СЂРµСЃСѓСЂСЃР°Рј" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="search"></div><div id="res-list" class="link-list"></div>';
+    var rs=$('#res-search');
+    if(rs){ rs.value=''; rs.addEventListener('input',function(){renderResList(this.value)}); setTimeout(function(){ try{ rs.focus({preventScroll:true}) }catch(e){} },50); }
+    (function(){ var cur=resGet(); var clean=resCleanup(cur); if(clean.length!==cur.length){ resSet(clean); } })();
+    renderResList('');
+  }
 }
 
-async function init(){
-  bindUI();
-  $("#ok").style.display="block";
-  $("#ok").textContent="Загрузка данных…";
-
-  const url = CSV_URL + (CSV_URL.includes("?") ? "&" : "?") + "t=" + Date.now(); // анти-кэш
-  let text="";
+var RES_KEY='mini_crm_resources_v1';
+function resCleanup(arr){
   try{
-    const res = await fetch(url, {cache:"no-store"});
-    if(!res.ok) throw new Error("HTTP "+res.status);
-    text = await res.text();
-  }catch(e){
-    $("#ok").style.display="none";
-    $("#err").textContent = "Ошибка загрузки CSV. Проверьте публикацию Google Таблиц.";
-    $("#err").style.display="block";
-    console.error(e);
-    return;
-  }
-
-  const rows = parseCSV(text).filter(r=>r.length && r.some(c=>String(c).trim()!==""));
-  if(!rows.length){
-    $("#ok").style.display="none";
-    $("#err").textContent="CSV пустой.";
-    $("#err").style.display="block";
-    return;
-  }
-
-  HEAD = rows[0];                 // первая строка — заголовки
-  DATA = rows.slice(1);           // остальные — данные
-  $("#ok").textContent = `Загружено записей: ${DATA.length}`;
-  applyFilter();
+    var banned = ['xn--', 'shobo.tb.ru/page2'];
+    return (arr||[]).filter(function(it){
+      var u = String((it&&it.u)||'');
+      if(!/^https?:\/\//i.test(u)) return false;
+      for(var i=0;i<banned.length;i++){ if(u.indexOf(banned[i])!==-1) return false; }
+      if(u.indexOf(' ')!==-1) return false;
+      return true;
+    });
+  }catch(e){ return []; }
+}
+function resGet(){
+  try{
+    var raw=localStorage.getItem(RES_KEY);
+    var v=raw?JSON.parse(raw):[];
+    v = Array.isArray(v)?v:[];
+    v = resCleanup(v);
+    if(raw){ localStorage.setItem(RES_KEY, JSON.stringify(v)); }
+    return v;
+  }catch(e){ return []; }
+}
+function resSet(arr){try{localStorage.setItem(RES_KEY,JSON.stringify(arr));}catch(e){}}
+function renderResList(filter){
+  var list=$('#res-list'); if(!list){return}
+  var all=resGet(); list.innerHTML='';
+  var q=(filter||'').toLowerCase();
+  function labelFrom(u){ try{ var h=new URL(u).hostname.replace(/^www\./,''); var parts=h.split('.'); return (parts.length>2?parts[parts.length-2]:parts[0]).replace(/[^a-zA-ZР°-СЏРђ-РЇ0-9_-]/g,''); }catch(e){ return String(u).replace(/^https?:\/\//,'').replace(/\/$/,''); } }
+  all.filter(function(it){ var t=(it.t||'').toLowerCase(),u=(it.u||'').toLowerCase(); return !q || t.indexOf(q)!==-1 || u.indexOf(q)!==-1; }).forEach(function(it){
+    var a=document.createElement('a'); a.href=it.u; a.target='_blank'; a.rel='noopener noreferrer'; a.textContent=(it.t&&it.t.trim())?it.t:labelFrom(it.u); a.dataset.url=it.u;
+    var pressTimer=null; var pressed=false;
+    function startPress(){ pressed=false; clearTimeout(pressTimer); pressTimer=setTimeout(function(){ pressed=true; toast('РЎСЃС‹Р»РєР°: '+ (a.dataset.url||'')); },650); }
+    function endPress(ev){ clearTimeout(pressTimer); if(pressed){ ev && ev.preventDefault(); } }
+    a.addEventListener('touchstart',function(){ startPress(); },{passive:true});
+    a.addEventListener('touchend',function(ev){ endPress(ev); },{passive:false});
+    a.addEventListener('mousedown',function(){ startPress(); });
+    a.addEventListener('mouseup',function(ev){ endPress(ev); });
+    list.appendChild(a);
+  });
 }
 
-function applyFilter(){
-  const q = norm($("#q").value);
-  if(!q) VIEW = DATA;
-  else   VIEW = DATA.filter(r => r.some(c => norm(c).includes(q)));
-  renderResults(VIEW);
+function initAdmin(){
+  $('#admin-close').onclick=function(){showAdmin(false)};
+  $('#res-close').onclick=function(){showRes(false)};
+  $('#admin-login').onclick=function(){var p=$('#admin-pass').value.trim();var ok=(p==='19801980');if(ok){var ar=$('#admin-area'); if(ar){ar.classList.remove('hidden')} toast('Р’С…РѕРґ РІС‹РїРѕР»РЅРµРЅ')}else{toast('РќРµРІРµСЂРЅС‹Р№ РїР°СЂРѕР»СЊ')}};
+  $('#settings-search').oninput=function(){};
+  var rs=$('#res-search'); if(rs){ rs.oninput=function(){renderResList(this.value)}; }
+  $('#quick-create').onclick=function(){var n=$('#quick-name').value.trim();var ph=$('#quick-phone').value.trim();if(!n){toast('Р’РІРµРґРёС‚Рµ РёРјСЏ');return}var row={id:Math.random().toString(36).slice(2,8),name:n,phone:ph,date:isoDate(),parts:0,labor:0,markup:0,paid:0,debt:0,note:'',orderUrl:'',rating:5,updated:new Date().toISOString()};CRMDB.put(row).then(function(){toast('РЎРѕР·РґР°РЅРѕ');CRMDB.search($('#q').value).then(renderList)})};
 }
 
-function renderResults(rows){
-  const box = $("#results");
-  if(!rows.length){
-    $("#ok").style.display="none";
-    $("#err").textContent="Ничего не найдено.";
-    $("#err").style.display="block";
-    box.innerHTML="";
-    return;
-  }
-  $("#err").style.display="none";
-  $("#ok").style.display="block";
-  $("#ok").textContent = `Найдено: ${rows.length}`;
-
-  // По умолчанию считаем, что 1-я колонка — название, 2-я — ссылка. Остальные тоже выводим.
-  const html = rows.map(r=>{
-    const name = (r[0]||"").trim();
-    const url  = (r[1]||"").trim();
-    const more = r.slice(2).filter(x=>String(x||"").trim()!=="").map(x=>String(x)).join(" • ");
-    const link = /^https?:\/\//i.test(url) ? `<a href="${url}" target="_blank" rel="noopener">Скачать / Открыть</a>` : "";
-    return `<div class="card">
-      <h3>${name||"(без названия)"}</h3>
-      ${url ? `<div>${link}</div>` : `<div style="color:#777">Ссылка не указана</div>`}
-      ${more ? `<div style="margin-top:6px;color:#666">${more}</div>` : ""}
-    </div>`;
-  }).join("");
-  box.innerHTML = html;
+function main(){
+  initDemo().then(function(){
+    $('#q').addEventListener('input',onSearch);
+    $('#btn-new').addEventListener('click',function(){openSheet(null)});
+    $('#empty-add').addEventListener('click',function(){openSheet(null)});
+    $('#sheet-close').addEventListener('click',function(){closeSheet()});
+    var press;$('#btn-new').addEventListener('touchstart',function(){press=setTimeout(function(){CRMDB.all().then(exportCSV)},650)},{passive:true});
+    $('#btn-new').addEventListener('touchend',function(){clearTimeout(press)});
+    $('#btn-new').addEventListener('contextmenu',function(e){e.preventDefault();CRMDB.all().then(exportCSV)});
+    CRMDB.all().then(function(r){renderList(r)});
+    attachGestures();
+    initAdmin();
+    (function(){
+      var body=$('#res-body'); if(!body) return;
+      var inputs=$$('.settings-input', body);
+      inputs.forEach(function(node, idx){
+        var inp=node.querySelector('input');
+        if(idx>0 || (inp && inp.id!=='res-search')){ node.remove(); }
+      });
+    })();
+    renderResList('');
+    console.assert(computeDebt({parts:100,labor:0,markup:0,paid:500})===0,'computeDebt floor 0');
+    console.assert(computeDebt({parts:1000,labor:500,markup:0,paid:200})===1300,'computeDebt positive');
+    console.assert(validUrl('https://example.com')===true,'validUrl https');
+    console.assert(validUrl('notaurl')===false,'validUrl false');
+    console.assert(normalizePhone('8 999 123-45-67')==='79991234567','normalizePhone 8в†’7');
+    console.assert(normalizePhone('+7 (999) 123-45-67')==='79991234567','normalizePhone +7');
+    console.assert(normalizePhone('9991234567')==='79991234567','normalizePhone 9в†’7 prepend');
+    console.assert(sanitize('<b>')==='&lt;b&gt;','sanitize tags');
+    console.assert(fmt(1234)==='1вЂЇ234','fmt groups');
+    console.assert(computeDebt({parts:0,labor:0,markup:0,paid:0})===0,'computeDebt zero');
+    console.assert(typeof CRMDB.search==='function','CRMDB.search exists');
+  })
 }
-</script>
+
+document.addEventListener('DOMContentLoaded',main);
+
+// PWA: register service worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('./service-worker.js').then(function(reg){ console.log('[SW] registered', reg.scope); }).catch(function(e){ console.warn('[SW] failed', e); });
+  });
+}
+})();</script>
+  <div class="wm" aria-hidden="false">UgraRemKomp В· MiniCRM Mobile</div>
 </body>
 </html>
